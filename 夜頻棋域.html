@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>夜頻棋域 // MIDNIGHT FREQUENCY</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        void: "#090B14",
+        panel: "#0E1220",
+        cyanx: "#00F0FF",
+        magx: "#FF2A6D",
+        acid: "#FCEE09"
+      }
+    }
+  }
+};
+</script>
+<style>
+  :root {
+    --void: #090B14;
+    --panel: #0E1220;
+    --cyan: #00F0FF;
+    --mag: #FF2A6D;
+    --acid: #FCEE09;
+    --ink: #D5E8F0;
+    --dim: #6B7C89;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--void); color: var(--ink); }
+  body {
+    font-family: "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    overflow-x: hidden;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; }
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0, transparent 2px,
+      rgba(0, 0, 0, 0.14) 2px, rgba(0, 0, 0, 0.14) 3px
+    );
+  }
+  body::after {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 81;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.45) 100%);
+  }
+  .glitch {
+    position: relative;
+    color: #eef9ff;
+    letter-spacing: 0.04em;
+  }
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .glitch::before {
+    color: var(--cyan);
+    clip-path: inset(0 0 55% 0);
+    transform: translate(-1.5px, 0);
+    animation: glitchA 3.2s steps(2, end) infinite;
+    opacity: 0.85;
+  }
+  .glitch::after {
+    color: var(--mag);
+    clip-path: inset(50% 0 0 0);
+    transform: translate(1.5px, 0);
+    animation: glitchB 2.6s steps(2, end) infinite;
+    opacity: 0.85;
+  }
+  @keyframes glitchA {
+    0%, 86%, 100% { transform: translate(-1.5px, 0); }
+    88% { transform: translate(2px, -1px); }
+    92% { transform: translate(-3px, 1px); }
+  }
+  @keyframes glitchB {
+    0%, 80%, 100% { transform: translate(1.5px, 0); }
+    83% { transform: translate(-2px, 1px); }
+    90% { transform: translate(3px, 0); }
+  }
+  .spectrum { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+  .spectrum span {
+    display: block;
+    width: 4px;
+    height: 6px;
+    border-radius: 1px;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    animation: eq 0.7s ease-in-out infinite alternate;
+  }
+  .spectrum span:nth-child(2) { animation-duration: 0.52s; background: var(--mag); box-shadow: 0 0 8px var(--mag); }
+  .spectrum span:nth-child(3) { animation-duration: 0.9s; }
+  .spectrum span:nth-child(4) { animation-duration: 0.43s; background: var(--acid); box-shadow: 0 0 8px var(--acid); }
+  .spectrum span:nth-child(5) { animation-duration: 0.62s; background: var(--mag); box-shadow: 0 0 8px var(--mag); }
+  @keyframes eq {
+    from { height: 4px; opacity: 0.55; }
+    to { height: 22px; opacity: 1; }
+  }
+  .hud-btn {
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    background: rgba(0, 240, 255, 0.06);
+    color: var(--ink);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: 0.15s ease;
+    white-space: nowrap;
+  }
+  .hud-btn:hover { border-color: var(--cyan); background: rgba(0, 240, 255, 0.16); color: #fff; }
+  .hud-btn.active {
+    border-color: var(--cyan);
+    background: rgba(0, 240, 255, 0.22);
+    color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+  }
+  .hud-btn.mag {
+    border-color: rgba(255, 42, 109, 0.45);
+    background: rgba(255, 42, 109, 0.08);
+  }
+  .hud-btn.mag:hover, .hud-btn.mag.active {
+    border-color: var(--mag);
+    background: rgba(255, 42, 109, 0.2);
+    color: #ffd0de;
+    box-shadow: 0 0 12px rgba(255, 42, 109, 0.3);
+  }
+  .hud-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .panel {
+    background: linear-gradient(180deg, rgba(14, 18, 32, 0.96), rgba(9, 11, 20, 0.96));
+    border: 1px solid rgba(0, 240, 255, 0.18);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+  .stat-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .stat-bar > i { display: block; height: 100%; transition: width 0.35s ease; }
+  .board-frame {
+    position: relative;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(0, 240, 255, 0.22);
+    box-shadow: 0 0 0 1px rgba(255, 42, 109, 0.08), inset 0 0 40px rgba(0, 240, 255, 0.03);
+  }
+  .board-frame::before, .board-frame::after {
+    content: "";
+    position: absolute;
+    width: 16px; height: 16px;
+    border: 2px solid var(--cyan);
+    pointer-events: none;
+  }
+  .board-frame::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .board-frame::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; box-shadow: none; border-color: var(--mag); }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 4px;
+    width: min(68vw, 430px);
+    aspect-ratio: 1;
+  }
+  #fx-layer {
+    position: absolute;
+    inset: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 4px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .cell {
+    position: relative;
+    background: rgba(8, 12, 24, 0.92);
+    border: 1px solid rgba(0, 240, 255, 0.12);
+    cursor: pointer;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .cell:hover { border-color: rgba(0, 240, 255, 0.45); background: rgba(0, 240, 255, 0.05); }
+  .cell.node {
+    border-color: var(--acid);
+    box-shadow: inset 0 0 14px rgba(252, 238, 9, 0.18), 0 0 8px rgba(252, 238, 9, 0.15);
+  }
+  .cell.node::after {
+    content: "NODE";
+    position: absolute;
+    bottom: 2px; right: 3px;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    color: var(--acid);
+    opacity: 0.8;
+    pointer-events: none;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .cell.legal { box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.45); }
+  .cell.overwrite {
+    box-shadow: inset 0 0 0 2px var(--cyan), 0 0 10px rgba(0, 240, 255, 0.35);
+  }
+  .cell.atk-range {
+    box-shadow: inset 0 0 0 2px #ff2a4a, 0 0 10px rgba(255, 42, 74, 0.45);
+    border-color: #ff2a4a;
+  }
+  .cell.highlight {
+    box-shadow: inset 0 0 18px rgba(0, 240, 255, 0.45), 0 0 16px rgba(0, 240, 255, 0.4);
+    z-index: 2;
+  }
+  .cell.flash { animation: hitflash 0.38s ease; }
+  .cell.shake { animation: shake 0.4s ease; }
+  @keyframes hitflash {
+    0%, 100% { background: rgba(8, 12, 24, 0.92); }
+    35% { background: rgba(255, 42, 109, 0.55); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-3px, 1px); }
+    40% { transform: translate(3px, -1px); }
+    60% { transform: translate(-2px, 0); }
+    80% { transform: translate(2px, 1px); }
+  }
+  .unit {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+  }
+  .unit.player { color: var(--cyan); }
+  .unit.ai { color: var(--mag); }
+  .unit-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 2px 2px;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  }
+  .unit.player .unit-frame {
+    background: linear-gradient(160deg, rgba(0, 240, 255, 0.18), rgba(0, 240, 255, 0.04));
+    box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.55);
+  }
+  .unit.ai .unit-frame {
+    background: linear-gradient(160deg, rgba(255, 42, 109, 0.2), rgba(255, 42, 109, 0.04));
+    box-shadow: inset 0 0 0 1px rgba(255, 42, 109, 0.55);
+  }
+  .unit-ico { font-size: 16px; line-height: 1; filter: drop-shadow(0 0 4px currentColor); }
+  .unit-meta { width: 100%; display: flex; justify-content: space-between; font-size: 9px; letter-spacing: 0.04em; }
+  .spawn-tag { font-size: 8px; opacity: 0.85; }
+  .ghost {
+    opacity: 0.45;
+    filter: grayscale(0.2);
+  }
+  .arrow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 7px);
+    grid-template-rows: repeat(3, 7px);
+    gap: 1px;
+  }
+  .arrow-grid i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    line-height: 1;
+    color: transparent;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .arrow-grid i.lit {
+    color: inherit;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+    text-shadow: 0 0 4px #fff;
+    color: #091018;
+    font-weight: 700;
+  }
+  .arrow-grid i.core { background: currentColor; opacity: 0.9; }
+  .forecast {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 1px 4px;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .forecast.hp {
+    color: #ff6b8a;
+    background: rgba(20, 0, 8, 0.8);
+    border: 1px solid #ff2a4a;
+  }
+  .forecast.brk {
+    color: var(--acid);
+    background: rgba(20, 16, 0, 0.85);
+    border: 1px solid var(--acid);
+    animation: brkblink 0.5s steps(2, end) infinite;
+  }
+  @keyframes brkblink { 50% { opacity: 0.25; } }
+  .cover-tag {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    font-size: 9px;
+    color: var(--cyan);
+    background: rgba(0, 20, 28, 0.86);
+    border: 1px solid var(--cyan);
+    padding: 2px 4px;
+    pointer-events: none;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .floater {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 700;
+    animation: rise 0.85s ease-out forwards;
+    text-shadow: 0 0 8px currentColor;
+    white-space: nowrap;
+  }
+  .floater.hit { color: #ff4d73; }
+  .floater.recoil { color: var(--acid); }
+  .floater.signal { color: var(--acid); font-size: 11px; }
+  @keyframes rise {
+    0% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -22px); }
+  }
+  .card {
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    border: 1px solid rgba(0, 240, 255, 0.28);
+    background: linear-gradient(180deg, rgba(0, 240, 255, 0.1), rgba(8, 10, 18, 0.9));
+    cursor: pointer;
+    padding: 8px;
+    min-height: 112px;
+    transition: 0.15s ease;
+  }
+  .card:hover { border-color: var(--cyan); }
+  .card.selected {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px var(--cyan), 0 0 16px rgba(0, 240, 255, 0.28);
+  }
+  .card.preview {
+    cursor: default;
+    opacity: 0.72;
+    border-style: dashed;
+    background: rgba(8, 10, 18, 0.65);
+  }
+  .card.empty {
+    cursor: default;
+    opacity: 0.4;
+    min-height: 112px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+  #log {
+    height: 220px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.55;
+    padding-right: 4px;
+  }
+  #log::-webkit-scrollbar { width: 6px; }
+  #log::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.25); }
+  .log-p { color: var(--cyan); }
+  .log-a { color: #ff7aa3; }
+  .log-s { color: var(--acid); }
+  .ov-badge {
+    color: var(--acid);
+    border: 1px solid var(--acid);
+    padding: 2px 6px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    animation: brkblink 0.7s steps(2, end) infinite;
+    box-shadow: 0 0 10px rgba(252, 238, 9, 0.3);
+  }
+  .turn-hot { color: #ff4d73; }
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal {
+    width: min(640px, 92vw);
+    max-height: 84vh;
+    overflow: auto;
+    background: #0c101c;
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+    padding: 24px 26px;
+    box-shadow: 0 0 40px rgba(0, 240, 255, 0.12);
+  }
+  .hidden { display: none !important; }
+  .phase-pill {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 4px 8px;
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    color: var(--cyan);
+  }
+  .phase-pill.battle { border-color: var(--acid); color: var(--acid); }
+  .phase-pill.ai { border-color: var(--mag); color: var(--mag); }
+  .onair {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mag);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+  .onair i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mag);
+    box-shadow: 0 0 8px var(--mag);
+    animation: brkblink 1s steps(2, end) infinite;
+  }
+</style>
+</head>
+<body class="min-h-screen">
+  <div class="relative z-10 mx-auto max-w-6xl px-4 py-4">
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-4">
+        <div>
+          <div class="glitch text-xl md:text-2xl font-bold" data-text="夜頻棋域 // MIDNIGHT FREQUENCY">夜頻棋域 // MIDNIGHT FREQUENCY</div>
+          <div class="mono mt-1 text-[10px] tracking-[0.22em] text-[var(--dim)]">URBAN FREQUENCY BUREAU  ·  87.7 MHz</div>
+        </div>
+        <div class="spectrum" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <div id="turnBadge" class="mono text-sm tracking-widest">ROUND 01 / 15</div>
+        <div id="overdriveBadge" class="ov-badge hidden">OVERDRIVE</div>
+        <div id="phasePill" class="phase-pill mono">對策局調頻</div>
+        <span id="onair" class="onair hidden"><i></i>ON AIR</span>
+        <button id="btnSpeed" class="hud-btn mono" type="button">SPEED: 1X</button>
+        <button id="btnModeStd" class="hud-btn mono active" type="button">標準對戰</button>
+        <button id="btnModePuzzle" class="hud-btn mono mag" type="button">殘局委託</button>
+        <button id="btnRestart" class="hud-btn mono" type="button">重新開始</button>
+        <button id="btnRules" class="hud-btn mono" type="button">規則說明</button>
+      </div>
+    </header>
+
+    <div class="grid gap-4 lg:grid-cols-[1fr_340px] items-start">
+      <section>
+        <div id="aiStatus" class="panel mb-3 px-4 py-3"></div>
+        <div class="board-frame mx-auto w-fit">
+          <div class="relative">
+            <div id="board"></div>
+            <div id="fx-layer"></div>
+          </div>
+        </div>
+        <div id="playerStatus" class="panel mt-3 px-4 py-3"></div>
+      </section>
+
+      <aside class="flex flex-col gap-3">
+        <div class="panel px-4 py-3">
+          <div class="mono mb-2 flex items-center justify-between text-[10px] tracking-[0.18em] text-[var(--cyan)]">
+            <span>可用手牌 // HAND</span>
+            <span>SELECT 1</span>
+          </div>
+          <div id="handRow" class="grid grid-cols-2 gap-2"></div>
+          <div class="mono mb-2 mt-3 text-[10px] tracking-[0.18em] text-[var(--dim)]">預備訊號 // NEXT PREVIEW</div>
+          <div id="previewRow" class="grid grid-cols-2 gap-2"></div>
+          <div class="mt-3 flex flex-col gap-2">
+            <button id="btnRetune" class="hud-btn mono w-full" type="button">RE-TUNE // 消耗 1 能量換牌</button>
+            <button id="btnSkill" class="hud-btn mag mono w-full" type="button">頻段超載・強制除靈 // 消耗 3 能量</button>
+            <button id="btnPass" class="hud-btn mono w-full" type="button">保持靜默 // PASS</button>
+          </div>
+        </div>
+        <div class="panel px-4 py-3">
+          <div class="mono mb-2 text-[10px] tracking-[0.18em] text-[var(--mag)]">午夜電台紀錄 // COMBAT LOG</div>
+          <div id="log" class="mono"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="rulesModal" class="modal-bg hidden">
+    <div class="modal">
+      <div class="glitch mb-3 text-lg font-bold" data-text="規則說明 // PROTOCOL">規則說明 // PROTOCOL</div>
+      <div class="space-y-3 text-sm leading-relaxed text-[var(--ink)]">
+        <p>5×5 頻率網格。棋子落下即鎖定，不能手動移動或指定攻擊目標。每回合：對策局部署 → 幽靈電台部署 → 依進場序號 <b>#1, #2…</b> 自動交戰 → 午夜結算。</p>
+        <p>單位會同時攻擊其方向箭頭所指、相鄰 1 格內的所有敵方。AI 的上下方向會自動鏡像。第 2 列的黃色 <b>NODE</b> 為異常發射節點；回合結束時，佔領節點會對敵方訊號造成傷害。</p>
+        <p>任一方訊號值歸零即敗。撐滿 15 回合後，訊號較高者獲勝。第 10 回合起進入 <b>OVERDRIVE</b>：全場攻擊力 +1，節點傷害加倍為 2。</p>
+        <p>單位陣亡會使所屬陣營訊號 -1。可對己方單位進行「頻段覆蓋部署」：舊單位安全撤離（不扣訊號），新單位取得最新進場序號。</p>
+        <p><b>RE-TUNE</b>：選中手牌後消耗 1 能量換 1 張。<b>頻段超載・強制除靈</b>：消耗 3 能量，點擊敵方單位造成 2 點傷害（每回合限 1 次）。調頻能量每回合 +1，上限 6。</p>
+        <p>單位：防暴鎮靈警 🛡️、裂口街頭客 ✂️、電波放送塔 📡、午夜外送員 📦（進場對正前方造成 2 傷害）、便利店夜班生 🥤（回合結束治療左右友軍 1 HP）、暴走滑板鬼 🛹（攻擊後自身受 1 傷害）。</p>
+      </div>
+      <button id="btnCloseRules" class="hud-btn mono mt-5" type="button">關閉頻率</button>
+    </div>
+  </div>
+
+  <div id="endModal" class="modal-bg hidden">
+    <div class="modal text-center">
+      <div id="endTitle" class="glitch mb-3 text-2xl font-bold" data-text="訊號終端">訊號終端</div>
+      <p id="endMsg" class="mb-6 text-sm"></p>
+      <div class="flex justify-center gap-2">
+        <button id="btnEndRestart" class="hud-btn mono" type="button">重新開始</button>
+        <button id="btnEndPuzzle" class="hud-btn mag mono hidden" type="button">重新挑戰</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const DIRS = {
+    N: [-1, 0], S: [1, 0], W: [0, -1], E: [0, 1],
+    NW: [-1, -1], NE: [-1, 1], SW: [1, -1], SE: [1, 1]
+  };
+  const DIR_GLYPH = { N: "▲", S: "▼", W: "◀", E: "▶", NW: "◤", NE: "◥", SW: "◣", SE: "◢" };
+  const DIR_ORDER = ["NW", "N", "NE", "W", "C", "E", "SW", "S", "SE"];
+  const NODES = [[2, 1], [2, 3]];
+  const UNIT_DEFS = {
+    riot:    { id: "riot",    name: "防暴鎮靈警", icon: "🛡️", hp: 5, atk: 2, dirs: ["N"],           skill: null },
+    ripper:  { id: "ripper",  name: "裂口街頭客", icon: "✂️", hp: 3, atk: 3, dirs: ["NW", "NE"],    skill: null },
+    tower:   { id: "tower",   name: "電波放送塔", icon: "📡", hp: 6, atk: 2, dirs: ["N", "S", "E", "W"], skill: null },
+    courier: { id: "courier", name: "午夜外送員", icon: "📦", hp: 2, atk: 2, dirs: ["N", "NE", "NW"], skill: "battlecry" },
+    clerk:   { id: "clerk",   name: "便利店夜班生", icon: "🥤", hp: 3, atk: 1, dirs: ["W", "E"],      skill: "heal" },
+    skater:  { id: "skater",  name: "暴走滑板鬼", icon: "🛹", hp: 4, atk: 3, dirs: ["N", "S"],       skill: "recoil" }
+  };
+  const DECK_IDS = ["riot", "ripper", "tower", "courier", "clerk", "skater", "riot", "ripper", "tower", "courier", "clerk", "skater"];
+
+  const PHASE_LABEL = {
+    PLAYER_TURN: "對策局調頻",
+    AI_TURN: "幽靈電波介入",
+    BATTLE_PHASE: "自動交戰中",
+    END_PHASE: "午夜結算",
+    GAME_OVER: "訊號終端"
+  };
+
+  let state = null;
+  let fxId = 1;
+
+  function inBounds(r, c) {
+    return r >= 0 && r < 5 && c >= 0 && c < 5;
+  }
+  function cellAt(r, c) {
+    if (!inBounds(r, c)) return null;
+    return state.board[r][c];
+  }
+  function isNode(r, c) {
+    return NODES.some(function (n) { return n[0] === r && n[1] === c; });
+  }
+  function sideName(side) {
+    return side === "player" ? "對策局" : "幽靈電台";
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+    });
+  }
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+  function actionDelay() {
+    return state.speed === 2 ? 150 : 380;
+  }
+  function isOverdrive() {
+    return state.turn >= 10 && state.mode === "standard";
+  }
+  function getAtk(unit) {
+    return unit.atk + (isOverdrive() ? 1 : 0);
+  }
+  function getDirVec(dirName, side) {
+    let dr = DIRS[dirName][0];
+    let dc = DIRS[dirName][1];
+    if (side === "ai") dr = -dr;
+    return [dr, dc];
+  }
+  function getUnitDirVecs(unit) {
+    return unit.dirs.map(function (d) { return getDirVec(d, unit.side); });
+  }
+  function dirLitSet(unit) {
+    const set = {};
+    unit.dirs.forEach(function (d) {
+      if (unit.side !== "ai") { set[d] = true; return; }
+      const map = { N: "S", S: "N", NW: "SW", NE: "SE", SW: "NW", SE: "NE", W: "W", E: "E" };
+      set[map[d] || d] = true;
+    });
+    return set;
+  }
+
+  function emptySide(signal, energy) {
+    return {
+      signal: signal,
+      signalMax: 15,
+      energy: energy,
+      hand: [],
+      deck: [],
+      discard: [],
+      skillUsed: false
+    };
+  }
+
+  function newBoard() {
+    const b = [];
+    for (let r = 0; r < 5; r++) {
+      b[r] = [];
+      for (let c = 0; c < 5; c++) b[r][c] = null;
+    }
+    return b;
+  }
+
+  function baseState(mode) {
+    return {
+      mode: mode,
+      phase: "PLAYER_TURN",
+      turn: 1,
+      speed: state ? state.speed : 1,
+      board: newBoard(),
+      nextSpawn: 1,
+      player: emptySide(15, 0),
+      ai: emptySide(15, 0),
+      selectedHandIdx: null,
+      skillTargeting: false,
+      hover: null,
+      log: [],
+      locked: false,
+      winner: null,
+      endReason: "",
+      highlightUid: null,
+      flash: [],
+      shake: [],
+      fx: []
+    };
+  }
+
+  function uid() {
+    return "u" + Math.random().toString(36).slice(2, 9) + state.nextSpawn;
+  }
+
+  function createUnit(defId, side, r, c, hpOverride) {
+    const def = UNIT_DEFS[defId];
+    const unit = {
+      uid: uid(),
+      defId: defId,
+      name: def.name,
+      icon: def.icon,
+      side: side,
+      r: r,
+      c: c,
+      hp: hpOverride != null ? hpOverride : def.hp,
+      maxHp: def.hp,
+      atk: def.atk,
+      dirs: def.dirs.slice(),
+      skill: def.skill,
+      spawnId: state.nextSpawn++,
+      dead: false
+    };
+    return unit;
+  }
+
+  function placeUnit(unit) {
+    if (!inBounds(unit.r, unit.c)) return;
+    state.board[unit.r][unit.c] = unit;
+  }
+
+  function log(msg, cls) {
+    state.log.push({ msg: msg, cls: cls || "log-s" });
+    if (state.log.length > 80) state.log.shift();
+  }
+
+  function drawToHand(side, n) {
+    const p = state[side];
+    for (let i = 0; i < n; i++) {
+      if (p.hand.length >= 2) break;
+      if (p.deck.length === 0) {
+        if (p.discard.length === 0) break;
+        p.deck = shuffle(p.discard);
+        p.discard = [];
+        log(sideName(side) + " 棄牌堆重新調頻，洗回牌庫。", "log-s");
+      }
+      if (p.deck.length === 0) break;
+      p.hand.push(p.deck.shift());
+    }
+  }
+
+  function previewOf(side) {
+    return state[side].deck.slice(0, 2);
+  }
+
+  function allUnits() {
+    const list = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (!inBounds(r, c)) continue;
+        const u = state.board[r][c];
+        if (u && !u.dead) list.push(u);
+      }
+    }
+    return list.sort(function (a, b) { return a.spawnId - b.spawnId; });
+  }
+
+  function spawnFloater(r, c, text, cls) {
+    const id = fxId++;
+    state.fx.push({ id: id, r: r, c: c, text: text, cls: cls || "hit" });
+    setTimeout(function () {
+      if (!state) return;
+      state.fx = state.fx.filter(function (f) { return f.id !== id; });
+      paintFx();
+    }, 850);
+    paintFx();
+  }
+
+  function flashCell(r, c) {
+    const key = r + "," + c;
+    if (state.flash.indexOf(key) === -1) state.flash.push(key);
+    setTimeout(function () {
+      state.flash = state.flash.filter(function (k) { return k !== key; });
+      paintBoardClasses();
+    }, 380);
+  }
+
+  function shakeCell(r, c) {
+    const key = r + "," + c;
+    if (state.shake.indexOf(key) === -1) state.shake.push(key);
+    setTimeout(function () {
+      state.shake = state.shake.filter(function (k) { return k !== key; });
+      paintBoardClasses();
+    }, 400);
+  }
+
+  function checkSignalDefeat() {
+    const ps = state.player.signal;
+    const asv = state.ai.signal;
+    if (ps <= 0 && asv <= 0) {
+      state.winner = "draw";
+      state.endReason = "雙方訊號同時斷線，頻率共振。";
+    } else if (ps <= 0) {
+      state.winner = "ai";
+      state.endReason = "對策局訊號斷線，午夜幽靈電台接管頻段。";
+    } else if (asv <= 0) {
+      state.winner = "player";
+      state.endReason = state.mode === "puzzle"
+        ? "委託完成：凌晨三點的死局已被破解。"
+        : "怪談訊號被清除，都市頻率重新接通。";
+    }
+  }
+
+  function applyDamage(unit, dmg, reason) {
+    if (!unit || unit.dead) return false;
+    unit.hp -= dmg;
+    spawnFloater(unit.r, unit.c, "-" + dmg, reason === "recoil" ? "recoil" : "hit");
+    flashCell(unit.r, unit.c);
+    if (unit.hp <= 0) {
+      unit.hp = 0;
+      unit.dead = true;
+      const rr = unit.r, cc = unit.c;
+      if (inBounds(rr, cc) && state.board[rr][cc] === unit) {
+        state.board[rr][cc] = null;
+      }
+      state[unit.side].signal -= 1;
+      state[unit.side].discard.push(unit.defId);
+      spawnFloater(rr, cc, "訊號 -1", "signal");
+      shakeCell(rr, cc);
+      log("#" + unit.spawnId + " " + unit.name + " 沉默退場。" + sideName(unit.side) + " 訊號 → " + state[unit.side].signal, unit.side === "player" ? "log-p" : "log-a");
+      checkSignalDefeat();
+      return true;
+    }
+    return false;
+  }
+
+  function triggerBattlecry(unit) {
+    if (!unit || unit.skill !== "battlecry") return;
+    const vec = getDirVec("N", unit.side);
+    const rr = unit.r + vec[0];
+    const cc = unit.c + vec[1];
+    if (!inBounds(rr, cc)) return;
+    const t = state.board[rr][cc];
+    if (t && !t.dead && t.side !== unit.side) {
+      log("#" + unit.spawnId + " " + unit.name + " 進場戰吼：正前方 " + t.name + " 受到 2 點傷害。", unit.side === "player" ? "log-p" : "log-a");
+      applyDamage(t, 2, "hit");
+    }
+  }
+
+  function isLegalCell(r, c, side) {
+    if (!inBounds(r, c)) return false;
+    const u = state.board[r][c];
+    if (!u) return true;
+    return u.side === side && !u.dead;
+  }
+
+  function forecastAt(defId, side, r, c) {
+    const def = UNIT_DEFS[defId];
+    if (!def) return [];
+    const dmgMap = {};
+    function add(rr, cc, amt) {
+      if (!inBounds(rr, cc)) return;
+      const t = state.board[rr][cc];
+      if (!t || t.dead || t.side === side) return;
+      const k = rr + "," + cc;
+      dmgMap[k] = (dmgMap[k] || { r: rr, c: cc, hp: t.hp, dmg: 0 });
+      dmgMap[k].dmg += amt;
+    }
+    const atk = def.atk + (isOverdrive() ? 1 : 0);
+    def.dirs.forEach(function (d) {
+      const v = getDirVec(d, side);
+      add(r + v[0], c + v[1], atk);
+    });
+    if (def.skill === "battlecry") {
+      const v = getDirVec("N", side);
+      add(r + v[0], c + v[1], 2);
+    }
+    return Object.keys(dmgMap).map(function (k) { return dmgMap[k]; });
+  }
+
+  function arrowRangeCells(defId, side, r, c) {
+    const def = UNIT_DEFS[defId];
+    const cells = [];
+    def.dirs.forEach(function (d) {
+      const v = getDirVec(d, side);
+      const rr = r + v[0], cc = c + v[1];
+      if (inBounds(rr, cc)) cells.push([rr, cc]);
+    });
+    if (def.skill === "battlecry") {
+      const v = getDirVec("N", side);
+      const rr = r + v[0], cc = c + v[1];
+      if (inBounds(rr, cc) && !cells.some(function (x) { return x[0] === rr && x[1] === cc; })) {
+        cells.push([rr, cc]);
+      }
+    }
+    return cells;
+  }
+
+  function renderArrowGrid(unitOrDef, side) {
+    const dirs = unitOrDef.dirs;
+    const fake = { dirs: dirs, side: side };
+    const lit = dirLitSet(fake);
+    let html = '<div class="arrow-grid" aria-hidden="true">';
+    DIR_ORDER.forEach(function (d) {
+      if (d === "C") {
+        html += '<i class="core"></i>';
+        return;
+      }
+      html += '<i class="' + (lit[d] ? "lit" : "") + '">' + (lit[d] ? DIR_GLYPH[d] : "") + "</i>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function renderUnitInner(unit, ghost) {
+    const cls = "unit " + unit.side + (ghost ? " ghost" : "");
+    return '<div class="' + cls + '"><div class="unit-frame">' +
+      '<div class="spawn-tag mono">#' + unit.spawnId + "</div>" +
+      '<div class="unit-ico">' + unit.icon + "</div>" +
+      renderArrowGrid(unit, unit.side) +
+      '<div class="unit-meta mono"><span>HP ' + unit.hp + '</span><span>ATK ' + getAtk(unit) + "</span></div>" +
+      "</div></div>";
+  }
+
+  function renderCard(defId, opts) {
+    opts = opts || {};
+    if (!defId) {
+      return '<div class="card empty">NO SIGNAL</div>';
+    }
+    const def = UNIT_DEFS[defId];
+    const extra = opts.preview ? " preview" : (opts.selected ? " selected" : "");
+    const skillText = def.skill === "battlecry" ? "進場戰吼：正前方 2 傷害" :
+      def.skill === "heal" ? "回合結束：治療左右友軍 1" :
+      def.skill === "recoil" ? "衝撞反傷：攻擊後自身 -1" : "無異能";
+    return '<div class="card' + extra + '" data-hand="' + (opts.idx != null ? opts.idx : "") + '">' +
+      '<div class="flex items-start justify-between gap-2">' +
+      '<div><div class="text-lg leading-none">' + def.icon + '</div>' +
+      '<div class="mt-1 text-[12px] font-semibold">' + esc(def.name) + "</div></div>" +
+      renderArrowGrid(def, "player") +
+      "</div>" +
+      '<div class="mono mt-2 flex justify-between text-[10px] text-[var(--cyan)]"><span>HP ' + def.hp + "</span><span>ATK " + (def.atk + (isOverdrive() ? 1 : 0)) + "</span></div>" +
+      '<div class="mt-1 text-[10px] text-[var(--dim)]">' + skillText + "</div></div>";
+  }
+
+  function energyPips(n, color) {
+    color = color || "var(--cyan)";
+    let s = '<div class="flex gap-1">';
+    for (let i = 0; i < 6; i++) {
+      const on = i < n;
+      s += '<span style="width:10px;height:10px;clip-path:polygon(2px 0,100% 0,100% 8px,8px 100%,0 100%,0 2px);background:' +
+        (on ? color : "rgba(255,255,255,0.08)") + ";" +
+        (on ? "box-shadow:0 0 6px " + color + ";" : "") + '"></span>';
+    }
+    return s + "</div>";
+  }
+
+  function renderStatus(side) {
+    const p = state[side];
+    const color = side === "player" ? "var(--cyan)" : "var(--mag)";
+    const label = side === "player" ? "都市頻率對策局" : "午夜幽靈電台";
+    const pct = Math.max(0, Math.min(100, (p.signal / 15) * 100));
+    return '<div class="flex items-center justify-between gap-3">' +
+      '<div><div class="mono text-[10px] tracking-[0.18em]" style="color:' + color + '">' + label + "</div>" +
+      '<div class="mt-1 text-sm">訊號值 <b class="mono">' + p.signal + "</b> / 15</div></div>" +
+      '<div class="flex-1"><div class="stat-bar"><i style="width:' + pct + "%;background:" + color + ";box-shadow:0 0 8px " + color + ';"></i></div>' +
+      '<div class="mt-2 flex items-center justify-between text-[11px]"><span class="mono text-[var(--dim)]">調頻能量 ' + p.energy + " / 6</span>" + energyPips(p.energy, color) + "</div></div></div>";
+  }
+
+  function currentForecast() {
+    if (state.phase !== "PLAYER_TURN" || state.selectedHandIdx == null || !state.hover) return [];
+    const defId = state.player.hand[state.selectedHandIdx];
+    if (!defId) return [];
+    const r = state.hover.r, c = state.hover.c;
+    if (!isLegalCell(r, c, "player")) return [];
+    return forecastAt(defId, "player", r, c);
+  }
+
+  function currentRange() {
+    if (state.phase !== "PLAYER_TURN" || state.selectedHandIdx == null || !state.hover) return [];
+    const defId = state.player.hand[state.selectedHandIdx];
+    if (!defId) return [];
+    const r = state.hover.r, c = state.hover.c;
+    if (!isLegalCell(r, c, "player")) return [];
+    return arrowRangeCells(defId, "player", r, c);
+  }
+
+  function paintBoardClasses() {
+    const board = document.getElementById("board");
+    if (!board) return;
+    const cells = board.querySelectorAll(".cell");
+    cells.forEach(function (el) {
+      const r = +el.dataset.r, c = +el.dataset.c;
+      const key = r + "," + c;
+      el.classList.toggle("flash", state.flash.indexOf(key) !== -1);
+      el.classList.toggle("shake", state.shake.indexOf(key) !== -1);
+    });
+  }
+
+  function paintFx() {
+    const layer = document.getElementById("fx-layer");
+    if (!layer) return;
+    let html = "";
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const bits = state.fx.filter(function (f) { return f.r === r && f.c === c; });
+        html += '<div style="position:relative">';
+        bits.forEach(function (f) {
+          html += '<div class="floater ' + f.cls + '">' + esc(f.text) + "</div>";
+        });
+        html += "</div>";
+      }
+    }
+    layer.innerHTML = html;
+  }
+
+  function renderBoard() {
+    const range = currentRange();
+    const forecasts = currentForecast();
+    const hover = state.hover;
+    const sel = state.phase === "PLAYER_TURN" && state.selectedHandIdx != null ? state.player.hand[state.selectedHandIdx] : null;
+    let html = "";
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (!inBounds(r, c)) continue;
+        const u = state.board[r][c];
+        const classes = ["cell"];
+        if (isNode(r, c)) classes.push("node");
+        const inRange = range.some(function (x) { return x[0] === r && x[1] === c; });
+        if (inRange) classes.push("atk-range");
+        if (sel && hover && hover.r === r && hover.c === c && isLegalCell(r, c, "player")) {
+          classes.push(u && u.side === "player" ? "overwrite" : "legal");
+        }
+        if (u && state.highlightUid === u.uid) classes.push("highlight");
+        const key = r + "," + c;
+        if (state.flash.indexOf(key) !== -1) classes.push("flash");
+        if (state.shake.indexOf(key) !== -1) classes.push("shake");
+        html += '<div class="' + classes.join(" ") + '" data-r="' + r + '" data-c="' + c + '">';
+        if (u && !u.dead) html += renderUnitInner(u, false);
+        if (sel && hover && hover.r === r && hover.c === c && isLegalCell(r, c, "player") && !u) {
+          const ghost = createGhost(sel, "player", r, c);
+          html += renderUnitInner(ghost, true);
+        }
+        if (sel && hover && hover.r === r && hover.c === c && u && u.side === "player") {
+          html += '<div class="cover-tag mono">覆蓋替換</div>';
+        }
+        const fc = forecasts.filter(function (f) { return f.r === r && f.c === c; })[0];
+        if (fc) {
+          if (fc.dmg >= fc.hp) html += '<div class="forecast brk mono">BREAK!</div>';
+          else html += '<div class="forecast hp mono">-' + fc.dmg + " HP</div>";
+        }
+        html += "</div>";
+      }
+    }
+    document.getElementById("board").innerHTML = html;
+    paintFx();
+  }
+
+  function createGhost(defId, side, r, c) {
+    const def = UNIT_DEFS[defId];
+    return {
+      uid: "ghost", defId: defId, name: def.name, icon: def.icon, side: side,
+      r: r, c: c, hp: def.hp, maxHp: def.hp, atk: def.atk, dirs: def.dirs,
+      skill: def.skill, spawnId: state.nextSpawn, dead: false
+    };
+  }
+
+  function renderHud() {
+    const turnEl = document.getElementById("turnBadge");
+    const maxTurn = state.mode === "puzzle" ? 1 : 15;
+    turnEl.textContent = "ROUND " + String(state.turn).padStart(2, "0") + " / " + String(maxTurn).padStart(2, "0");
+    turnEl.classList.toggle("turn-hot", isOverdrive());
+    document.getElementById("overdriveBadge").classList.toggle("hidden", !isOverdrive());
+    const pill = document.getElementById("phasePill");
+    pill.textContent = PHASE_LABEL[state.phase] || state.phase;
+    pill.classList.toggle("battle", state.phase === "BATTLE_PHASE" || state.phase === "END_PHASE");
+    pill.classList.toggle("ai", state.phase === "AI_TURN");
+    document.getElementById("onair").classList.toggle("hidden", state.phase !== "BATTLE_PHASE");
+    document.getElementById("btnSpeed").textContent = "SPEED: " + state.speed + "X";
+    document.getElementById("btnModeStd").classList.toggle("active", state.mode === "standard");
+    document.getElementById("btnModePuzzle").classList.toggle("active", state.mode === "puzzle");
+    document.getElementById("aiStatus").innerHTML = renderStatus("ai");
+    document.getElementById("playerStatus").innerHTML = renderStatus("player");
+
+    const canAct = state.phase === "PLAYER_TURN" && !state.locked && !state.winner;
+    let handHtml = "";
+    for (let i = 0; i < 2; i++) {
+      handHtml += renderCard(state.player.hand[i], { idx: i, selected: state.selectedHandIdx === i });
+    }
+    document.getElementById("handRow").innerHTML = handHtml;
+    const prev = previewOf("player");
+    let phtml = "";
+    for (let i = 0; i < 2; i++) phtml += renderCard(prev[i], { preview: true });
+    document.getElementById("previewRow").innerHTML = phtml;
+
+    const retuneOk = canAct && state.selectedHandIdx != null && state.player.hand[state.selectedHandIdx] && state.player.energy >= 1;
+    document.getElementById("btnRetune").disabled = !retuneOk;
+    const skillOk = canAct && state.player.energy >= 3 && !state.player.skillUsed;
+    document.getElementById("btnSkill").disabled = !skillOk && !state.skillTargeting;
+    document.getElementById("btnSkill").classList.toggle("active", state.skillTargeting);
+    document.getElementById("btnPass").disabled = !canAct;
+
+    const logEl = document.getElementById("log");
+    logEl.innerHTML = state.log.map(function (line) {
+      return '<div class="' + line.cls + '">» ' + esc(line.msg) + "</div>";
+    }).join("");
+    logEl.scrollTop = logEl.scrollHeight;
+
+    const end = document.getElementById("endModal");
+    if (state.phase === "GAME_OVER" && state.winner) {
+      end.classList.remove("hidden");
+      let title = "訊號終端";
+      if (state.winner === "player") title = state.mode === "puzzle" ? "委託完成" : "訊號接通";
+      else if (state.winner === "ai") title = state.mode === "puzzle" ? "委託失敗" : "訊號斷線";
+      else title = "頻率共振";
+      const t = document.getElementById("endTitle");
+      t.textContent = title;
+      t.setAttribute("data-text", title);
+      document.getElementById("endMsg").textContent = state.endReason;
+      document.getElementById("btnEndPuzzle").classList.toggle("hidden", state.mode !== "puzzle");
+    } else {
+      end.classList.add("hidden");
+    }
+  }
+
+  function render() {
+    if (!state) return;
+    renderBoard();
+    renderHud();
+  }
+
+  function finishGame() {
+    state.phase = "GAME_OVER";
+    state.locked = true;
+    state.skillTargeting = false;
+    render();
+  }
+
+  function startStandard() {
+    state = baseState("standard");
+    state.player.deck = shuffle(DECK_IDS);
+    state.ai.deck = shuffle(DECK_IDS);
+    drawToHand("player", 2);
+    drawToHand("ai", 2);
+    log("頻率已鎖定。標準對戰開始：將敵方訊號清零，或撐過 15 回合。", "log-s");
+    log("第 2 列 NODE 為異常發射節點。第 10 回合將進入午夜暴走。", "log-s");
+    render();
+  }
+
+  function startPuzzle() {
+    state = baseState("puzzle");
+    state.player.signal = 2;
+    state.ai.signal = 3;
+    state.player.hand = ["courier", "skater"];
+    const setup = [
+      { defId: "riot", side: "player", r: 2, c: 1, hp: 1 },
+      { defId: "riot", side: "player", r: 3, c: 3, hp: 2 },
+      { defId: "riot", side: "ai", r: 1, c: 1, hp: 2 },
+      { defId: "clerk", side: "ai", r: 2, c: 3, hp: 2 },
+      { defId: "ripper", side: "ai", r: 1, c: 3, hp: 2 }
+    ];
+    setup.forEach(function (s) {
+      const u = createUnit(s.defId, s.side, s.r, s.c, s.hp);
+      placeUnit(u);
+    });
+    log("殘局委託 #01：凌晨三點的死局。", "log-s");
+    log("委託目標：1 回合內清空敵方 3 點訊號！提示：善用『頻段覆蓋部署』與進場戰吼。", "log-s");
+    render();
+  }
+
+  function boot(mode) {
+    if (mode === "puzzle") startPuzzle();
+    else startStandard();
+  }
+
+  function deploy(side, handIdx, r, c) {
+    if (!inBounds(r, c)) return false;
+    if (!isLegalCell(r, c, side)) return false;
+    const p = state[side];
+    const defId = p.hand[handIdx];
+    if (!defId) return false;
+    const existing = cellAt(r, c);
+    if (existing && existing.side === side) {
+      p.discard.push(existing.defId);
+      state.board[r][c] = null;
+      log("#" + existing.spawnId + " " + existing.name + " 被頻段覆蓋，安全撤離。", side === "player" ? "log-p" : "log-a");
+    }
+    p.hand.splice(handIdx, 1);
+    const unit = createUnit(defId, side, r, c);
+    placeUnit(unit);
+    log("#" + unit.spawnId + " " + unit.name + " 部署於 (" + r + "," + c + ")" + (isNode(r, c) ? "〔NODE〕" : "") + "。", side === "player" ? "log-p" : "log-a");
+    triggerBattlecry(unit);
+    render();
+    return true;
+  }
+
+  function scoreAiPlace(defId, r, c) {
+    let score = 0;
+    if (isNode(r, c)) score += cellAt(r, c) ? 8 : 56;
+    const forecasts = forecastAt(defId, "ai", r, c);
+    forecasts.forEach(function (f) {
+      score += 22 + f.dmg * 3;
+      if (f.dmg >= f.hp) score += 18;
+    });
+    allUnits().forEach(function (u) {
+      if (u.side !== "player" || u.dead) return;
+      getUnitDirVecs(u).forEach(function (v) {
+        if (u.r + v[0] === r && u.c + v[1] === c) score -= 10;
+      });
+    });
+    if (r === 2) score += 3;
+    return score + Math.random() * 0.2;
+  }
+
+  function aiChoose() {
+    const hand = state.ai.hand;
+    let best = null;
+    let bestScore = -1e9;
+    for (let i = 0; i < hand.length; i++) {
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          if (!inBounds(r, c)) continue;
+          const u = state.board[r][c];
+          if (u) continue;
+          const s = scoreAiPlace(hand[i], r, c);
+          if (s > bestScore) {
+            bestScore = s;
+            best = { idx: i, r: r, c: c };
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  async function runAiTurn() {
+    state.phase = "AI_TURN";
+    state.locked = true;
+    state.selectedHandIdx = null;
+    state.skillTargeting = false;
+    render();
+    await sleep(300);
+    if (state.winner) return;
+    if (state.mode === "puzzle" || state.ai.hand.length === 0) {
+      log("幽靈電台保持靜默，沒有可介入的訊號。", "log-a");
+    } else {
+      const choice = aiChoose();
+      if (choice) deploy("ai", choice.idx, choice.r, choice.c);
+      else log("幽靈電台找不到可部署的格位，選擇靜默。", "log-a");
+    }
+    render();
+  }
+
+  async function unitAct(unit) {
+    if (!unit || unit.dead) return;
+    if (!inBounds(unit.r, unit.c)) return;
+    state.highlightUid = unit.uid;
+    render();
+    const targets = [];
+    getUnitDirVecs(unit).forEach(function (v) {
+      const rr = unit.r + v[0];
+      const cc = unit.c + v[1];
+      if (!inBounds(rr, cc)) return;
+      const t = state.board[rr][cc];
+      if (t && !t.dead && t.side !== unit.side) targets.push(t);
+    });
+    const atk = getAtk(unit);
+    if (targets.length) {
+      log("#" + unit.spawnId + " " + unit.name + " 發射 " + atk + " 傷害 → " + targets.map(function (t) { return t.name; }).join("、") + "。", unit.side === "player" ? "log-p" : "log-a");
+      render();
+      for (let i = 0; i < targets.length; i++) {
+        if (targets[i].dead) continue;
+        applyDamage(targets[i], atk, "hit");
+        render();
+      }
+      if (unit.skill === "recoil" && !unit.dead) {
+        log("#" + unit.spawnId + " " + unit.name + " 衝撞反傷，自身受到 1 點傷害。", unit.side === "player" ? "log-p" : "log-a");
+        applyDamage(unit, 1, "recoil");
+        render();
+      }
+    } else {
+      log("#" + unit.spawnId + " " + unit.name + " 掃描完畢，範圍內沒有敵方訊號。", unit.side === "player" ? "log-p" : "log-a");
+      render();
+    }
+    await sleep(actionDelay());
+    state.highlightUid = null;
+    render();
+  }
+
+  async function runEndPhase() {
+    if (state.winner) return;
+    state.phase = "END_PHASE";
+    render();
+    const nodeDmg = isOverdrive() ? 2 : 1;
+    NODES.forEach(function (n) {
+      if (!inBounds(n[0], n[1])) return;
+      const u = state.board[n[0]][n[1]];
+      if (!u || u.dead) return;
+      const foe = u.side === "player" ? "ai" : "player";
+      state[foe].signal -= nodeDmg;
+      spawnFloater(n[0], n[1], "NODE -" + nodeDmg, "signal");
+      log("異常節點 (" + n[0] + "," + n[1] + ") 由 " + sideName(u.side) + " 佔領，" + sideName(foe) + " 訊號 -" + nodeDmg + " → " + state[foe].signal + "。", "log-s");
+      checkSignalDefeat();
+    });
+    render();
+    if (state.winner) return;
+
+    allUnits().forEach(function (u) {
+      if (u.skill !== "heal" || u.dead) return;
+      ["W", "E"].forEach(function (d) {
+        const v = getDirVec(d, u.side);
+        const rr = u.r + v[0], cc = u.c + v[1];
+        if (!inBounds(rr, cc)) return;
+        const ally = state.board[rr][cc];
+        if (!ally || ally.dead || ally.side !== u.side) return;
+        if (ally.hp >= ally.maxHp) return;
+        ally.hp = Math.min(ally.maxHp, ally.hp + 1);
+        spawnFloater(rr, cc, "+1", "recoil");
+        log("#" + u.spawnId + " " + u.name + " 夜班照料，" + ally.name + " HP → " + ally.hp + "。", u.side === "player" ? "log-p" : "log-a");
+      });
+    });
+
+    state.player.energy = Math.min(6, state.player.energy + 1);
+    state.ai.energy = Math.min(6, state.ai.energy + 1);
+    state.player.skillUsed = false;
+    drawToHand("player", 1);
+    drawToHand("ai", 1);
+    log("調頻能量回復。雙方手牌補至 2 張。", "log-s");
+
+    if (state.mode === "puzzle") {
+      if (state.ai.signal > 0) {
+        state.winner = "ai";
+        state.endReason = "第 1 回合結束，敵方訊號仍未歸零。委託失敗。";
+      }
+      return;
+    }
+
+    if (state.turn >= 15) {
+      if (state.player.signal > state.ai.signal) {
+        state.winner = "player";
+        state.endReason = "15 回合結束，對策局訊號較高，守住了頻率。";
+      } else if (state.ai.signal > state.player.signal) {
+        state.winner = "ai";
+        state.endReason = "15 回合結束，幽靈電台訊號較高。";
+      } else {
+        state.winner = "draw";
+        state.endReason = "15 回合結束，雙方訊號同分，頻率共振。";
+      }
+      return;
+    }
+
+    state.turn += 1;
+    if (state.turn === 10) {
+      log("午夜暴走！全場攻擊力 +1，異常節點傷害加倍。", "log-s");
+    }
+  }
+
+  async function runBattlePhase() {
+    state.locked = true;
+    state.phase = "BATTLE_PHASE";
+    state.selectedHandIdx = null;
+    state.skillTargeting = false;
+    log("—— 自動交戰開始，依進場序號結算 ——", "log-s");
+    render();
+    try {
+      if (!state.winner) {
+        const units = allUnits();
+        for (let i = 0; i < units.length; i++) {
+          if (state.winner) break;
+          const live = allUnits().filter(function (u) { return u.uid === units[i].uid; })[0];
+          if (!live) continue;
+          await unitAct(live);
+        }
+      }
+      if (!state.winner) await runEndPhase();
+    } catch (err) {
+      log("系統雜訊：" + (err && err.message ? err.message : err), "log-s");
+    } finally {
+      if (state.winner) {
+        finishGame();
+      } else {
+        state.phase = "PLAYER_TURN";
+        state.locked = false;
+        state.selectedHandIdx = null;
+        state.skillTargeting = false;
+        log("—— 第 " + state.turn + " 回合，對策局請部署 ——", "log-p");
+        render();
+      }
+    }
+  }
+
+  async function afterPlayerAction() {
+    state.locked = true;
+    render();
+    try {
+      if (state.winner) { finishGame(); return; }
+      await runAiTurn();
+      if (state.winner) { finishGame(); return; }
+      await runBattlePhase();
+    } catch (err) {
+      log("系統雜訊：" + (err && err.message ? err.message : err), "log-s");
+      if (state.winner) finishGame();
+      else {
+        state.phase = "PLAYER_TURN";
+        state.locked = false;
+        state.selectedHandIdx = null;
+        state.skillTargeting = false;
+        render();
+      }
+    }
+  }
+
+  function onCellClick(r, c) {
+    if (!inBounds(r, c)) return;
+    if (state.locked || state.winner || state.phase !== "PLAYER_TURN") return;
+    if (state.skillTargeting) {
+      const t = cellAt(r, c);
+      if (!t || t.side !== "ai" || t.dead) return;
+      if (state.player.energy < 3 || state.player.skillUsed) return;
+      state.player.energy -= 3;
+      state.player.skillUsed = true;
+      state.skillTargeting = false;
+      log("頻段超載・強制除靈：" + t.name + " 受到 2 點傷害。", "log-p");
+      applyDamage(t, 2, "hit");
+      render();
+      if (state.winner) finishGame();
+      return;
+    }
+    if (state.selectedHandIdx == null) return;
+    if (!isLegalCell(r, c, "player")) return;
+    const ok = deploy("player", state.selectedHandIdx, r, c);
+    state.selectedHandIdx = null;
+    if (ok) afterPlayerAction();
+  }
+
+  function onHandClick(idx) {
+    if (state.locked || state.winner || state.phase !== "PLAYER_TURN") return;
+    if (!state.player.hand[idx]) return;
+    state.skillTargeting = false;
+    state.selectedHandIdx = state.selectedHandIdx === idx ? null : idx;
+    render();
+  }
+
+  function onRetune() {
+    if (state.locked || state.winner || state.phase !== "PLAYER_TURN") return;
+    const idx = state.selectedHandIdx;
+    if (idx == null || !state.player.hand[idx]) return;
+    if (state.player.energy < 1) return;
+    state.player.energy -= 1;
+    const gone = state.player.hand.splice(idx, 1)[0];
+    state.player.discard.push(gone);
+    drawToHand("player", 1);
+    state.selectedHandIdx = null;
+    log("RE-TUNE：棄置 " + UNIT_DEFS[gone].name + "，重新調頻抽牌。能量 " + state.player.energy + "。", "log-p");
+    render();
+  }
+
+  function onSkill() {
+    if (state.locked || state.winner || state.phase !== "PLAYER_TURN") return;
+    if (state.skillTargeting) {
+      state.skillTargeting = false;
+      render();
+      return;
+    }
+    if (state.player.energy < 3 || state.player.skillUsed) return;
+    state.selectedHandIdx = null;
+    state.skillTargeting = true;
+    log("選擇一個敵方單位，施放頻段超載・強制除靈。", "log-p");
+    render();
+  }
+
+  function onPass() {
+    if (state.locked || state.winner || state.phase !== "PLAYER_TURN") return;
+    state.selectedHandIdx = null;
+    state.skillTargeting = false;
+    log("對策局保持靜默，本回合不部署。", "log-p");
+    afterPlayerAction();
+  }
+
+  function bind() {
+    document.getElementById("board").addEventListener("click", function (e) {
+      const cell = e.target.closest("[data-r]");
+      if (!cell) return;
+      onCellClick(+cell.dataset.r, +cell.dataset.c);
+    });
+    document.getElementById("board").addEventListener("mouseover", function (e) {
+      const cell = e.target.closest("[data-r]");
+      if (!cell) return;
+      const r = +cell.dataset.r, c = +cell.dataset.c;
+      if (!state.hover || state.hover.r !== r || state.hover.c !== c) {
+        state.hover = { r: r, c: c };
+        renderBoard();
+      }
+    });
+    document.getElementById("board").addEventListener("mouseleave", function () {
+      state.hover = null;
+      renderBoard();
+    });
+    document.getElementById("handRow").addEventListener("click", function (e) {
+      const card = e.target.closest("[data-hand]");
+      if (!card || card.dataset.hand === "") return;
+      onHandClick(+card.dataset.hand);
+    });
+    document.getElementById("btnRetune").addEventListener("click", onRetune);
+    document.getElementById("btnSkill").addEventListener("click", onSkill);
+    document.getElementById("btnPass").addEventListener("click", onPass);
+    document.getElementById("btnSpeed").addEventListener("click", function () {
+      if (!state) return;
+      state.speed = state.speed === 1 ? 2 : 1;
+      renderHud();
+    });
+    document.getElementById("btnModeStd").addEventListener("click", function () { boot("standard"); });
+    document.getElementById("btnModePuzzle").addEventListener("click", function () { boot("puzzle"); });
+    document.getElementById("btnRestart").addEventListener("click", function () { boot(state ? state.mode : "standard"); });
+    document.getElementById("btnEndRestart").addEventListener("click", function () { boot(state ? state.mode : "standard"); });
+    document.getElementById("btnEndPuzzle").addEventListener("click", function () { boot("puzzle"); });
+    document.getElementById("btnRules").addEventListener("click", function () {
+      document.getElementById("rulesModal").classList.remove("hidden");
+    });
+    document.getElementById("btnCloseRules").addEventListener("click", function () {
+      document.getElementById("rulesModal").classList.add("hidden");
+    });
+    document.getElementById("rulesModal").addEventListener("click", function (e) {
+      if (e.target.id === "rulesModal") e.currentTarget.classList.add("hidden");
+    });
+  }
+
+  bind();
+  boot("standard");
+})();
+</script>
+</body>
+</html>
